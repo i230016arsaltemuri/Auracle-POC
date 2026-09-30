@@ -58,9 +58,19 @@ export default function PRReport() {
               <span className="badge badge-fail" style={{ fontSize: 12, padding: '3px 10px' }}>GATE: FAIL</span>
               <span className="badge badge-high" style={{ fontSize: 12, padding: '3px 10px' }}>RISK: HIGH</span>
             </div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 8 }}>
-              {PR.title}
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+                {PR.title}
+              </h1>
+              <button 
+                className="btn btn-primary" 
+                style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px' }}
+                onClick={() => navigate('/ide?step=2')}
+              >
+                <FileCode size={14} />
+                Open in IDE to Fix
+              </button>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
                 <GitPullRequest size={12} />

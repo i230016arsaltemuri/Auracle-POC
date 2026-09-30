@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { COPILOT_CONVERSATIONS, EVIDENCE_LEDGER } from '../data/mockData'
-import { Bot, Send, AlertCircle, X } from 'lucide-react'
+import { Bot, Send, X } from 'lucide-react'
 
 interface Message {
   id: string
@@ -128,73 +128,111 @@ I cannot explain things Auracle did not observe or predict. Try one of the sugge
   }
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ maxWidth: 1000, margin: '0 auto', height: '100%', padding: '24px 0', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <div style={{ width: 28, height: 28, background: 'var(--purple-dim)', border: '1px solid rgba(155,111,255,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Bot size={15} style={{ color: '#c9a8ff' }} />
+      <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <div style={{ width: 36, height: 36, background: 'var(--purple-dim)', border: '1px solid rgba(155,111,255,0.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bot size={20} style={{ color: '#c9a8ff' }} />
           </div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>AI Copilot</h1>
-          <span className="badge badge-purple">Evidence-Grounded</span>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Auracle Copilot</h1>
+          <span className="badge badge-purple" style={{ fontSize: 11, padding: '4px 8px' }}>Evidence-Grounded AI</span>
         </div>
-        <div className="warn-box">
-          <AlertCircle size={13} style={{ color: 'var(--yellow)', flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <strong style={{ color: 'var(--yellow-text)' }}>Copilot explains structured Auracle evidence.</strong>{' '}
-            It does not create execution or coverage facts. Every answer cites evidence IDs traceable to observed facts or labeled model predictions.
-          </div>
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          Ask questions about PR #184's analysis, test selection, risks, and evidence.
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
-        {/* Chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
+        {/* Chat Area */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, position: 'relative' }}>
           {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 16, display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 24 }}>
             {messages.map((msg) => (
-              <div key={msg.id} className="chat-message">
-                <div className="chat-user">
-                  <div className={`chat-avatar ${msg.role}`}>
-                    {msg.role === 'user' ? 'MC' : <Bot size={12} />}
+              <div key={msg.id} style={{ display: 'flex', gap: 16, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: msg.role === 'user' ? 'var(--accent)' : 'var(--purple-dim)',
+                  color: msg.role === 'user' ? '#0f172a' : '#c9a8ff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, fontWeight: 700, fontSize: 14,
+                  border: msg.role === 'ai' ? '1px solid rgba(155,111,255,0.3)' : 'none',
+                  boxShadow: msg.role === 'user' ? '0 2px 10px rgba(210, 243, 76, 0.2)' : 'none'
+                }}>
+                  {msg.role === 'user' ? 'MC' : <Bot size={18} />}
+                </div>
+                
+                <div style={{
+                  flex: 1,
+                  maxWidth: '85%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                    {msg.role === 'user' ? 'Maya Chen' : 'Auracle'} · {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
-                      {msg.role === 'user' ? 'Maya Chen' : 'Auracle Copilot'} · {msg.timestamp.toLocaleTimeString()}
-                    </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                      {renderContent(msg.content)}
-                    </div>
-                    {msg.evidenceIds && msg.evidenceIds.length > 0 && (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
-                        {msg.evidenceIds.map(id => (
-                          <div
-                            key={id}
-                            className="evidence-chip"
-                            onClick={() => setSelectedEvidence(selectedEvidence === id ? null : id)}
-                          >
-                            📋 {id}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  <div style={{
+                    fontSize: 15,
+                    color: 'var(--text-primary)',
+                    lineHeight: 1.6,
+                    background: msg.role === 'user' ? 'var(--bg-elevated)' : 'transparent',
+                    padding: msg.role === 'user' ? '14px 18px' : '0 4px',
+                    borderRadius: 12,
+                    border: msg.role === 'user' ? '1px solid var(--border-subtle)' : 'none',
+                    textAlign: 'left'
+                  }}>
+                    {renderContent(msg.content)}
                   </div>
+                  {msg.evidenceIds && msg.evidenceIds.length > 0 && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14, marginLeft: msg.role === 'ai' ? 4 : 0 }}>
+                      {msg.evidenceIds.map(id => (
+                        <div
+                          key={id}
+                          onClick={() => setSelectedEvidence(selectedEvidence === id ? null : id)}
+                          style={{
+                            padding: '4px 10px',
+                            background: 'var(--bg-overlay)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: 16,
+                            fontSize: 12,
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontFamily: 'var(--font-mono)',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                        >
+                          📋 {id}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
 
             {isTyping && (
-              <div className="chat-message">
-                <div className="chat-user">
-                  <div className="chat-avatar ai"><Bot size={12} /></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingTop: 4 }}>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {[0, 1, 2].map(i => (
-                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--purple)', opacity: 0.6, animation: `pulse-dot 1.2s ease ${i * 0.2}s infinite` }} />
-                      ))}
-                    </div>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Retrieving evidence...</span>
+              <div style={{ display: 'flex', gap: 16, flexDirection: 'row' }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: 'var(--purple-dim)', color: '#c9a8ff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, border: '1px solid rgba(155,111,255,0.3)'
+                }}>
+                  <Bot size={18} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 4px' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[0, 1, 2].map(i => (
+                      <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--purple)', opacity: 0.6, animation: `pulse-dot 1.2s ease ${i * 0.2}s infinite` }} />
+                    ))}
                   </div>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Retrieving evidence...</span>
                 </div>
               </div>
             )}
@@ -202,95 +240,131 @@ I cannot explain things Auracle did not observe or predict. Try one of the sugge
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Suggested prompts */}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12, marginTop: 8 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Suggested questions for PR #184</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {/* Input Area */}
+          <div style={{ paddingTop: 16, background: 'var(--bg-base)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Suggested questions</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
               {SUGGESTED_PROMPTS.map((p, i) => (
                 <button
                   key={i}
-                  className="btn btn-secondary"
                   onClick={() => sendMessage(p)}
-                  style={{ fontSize: 11, padding: '4px 10px' }}
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border-default)',
+                    padding: '8px 12px',
+                    borderRadius: 16,
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   {p}
                 </button>
               ))}
             </div>
 
-            {/* Input */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 16, padding: '8px 12px', transition: 'border-color 0.2s ease' }}
+                 onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                 onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
+              <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage(input)}
-                placeholder="Ask about PR #184 analysis, test selection, risk, or evidence..."
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(input);
+                  }
+                }}
+                placeholder="Ask about PR #184 analysis, test selection, or evidence..."
                 style={{
                   flex: 1,
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 8,
-                  padding: '10px 14px',
-                  fontSize: 13,
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '8px 4px',
+                  fontSize: 15,
                   color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)',
                   outline: 'none',
+                  resize: 'none',
+                  minHeight: 44,
+                  maxHeight: 120,
+                  lineHeight: 1.5
                 }}
-                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                rows={1}
               />
               <button
-                className="btn btn-primary"
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isTyping}
-                style={{ opacity: !input.trim() || isTyping ? 0.5 : 1 }}
+                style={{
+                  background: input.trim() && !isTyping ? 'var(--accent)' : 'var(--bg-overlay)',
+                  color: input.trim() && !isTyping ? '#0f172a' : 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: input.trim() && !isTyping ? 'pointer' : 'default',
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0,
+                  marginBottom: 4
+                }}
               >
-                <Send size={13} />
+                <Send size={16} style={{ marginLeft: -2 }} />
               </button>
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11, color: 'var(--text-muted)' }}>
+              Auracle Copilot can make mistakes. Always review the evidence chain.
             </div>
           </div>
         </div>
 
         {/* Evidence panel */}
         {evidenceRecord && (
-          <div className="card" style={{ width: 320, flexShrink: 0, height: 'fit-content', maxHeight: '100%', overflowY: 'auto' }}>
-            <div className="card-header">
+          <div className="card" style={{ width: 340, flexShrink: 0, height: 'fit-content', maxHeight: '100%', overflowY: 'auto', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+            <div className="card-header" style={{ padding: '16px 20px' }}>
               <div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{evidenceRecord.id}</div>
-                <span className={`badge ${evidenceRecord.type === 'OBSERVED_FACT' ? 'badge-blue' : 'badge-purple'}`} style={{ fontSize: 9, marginTop: 4 }}>
-                  {evidenceRecord.type}
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>{evidenceRecord.id}</div>
+                <span className={`badge ${evidenceRecord.type === 'OBSERVED_FACT' ? 'badge-blue' : 'badge-purple'}`} style={{ fontSize: 10, marginTop: 6 }}>
+                  {evidenceRecord.type.replace('_', ' ')}
                 </span>
               </div>
-              <button className="btn btn-ghost" onClick={() => setSelectedEvidence(null)}>
-                <X size={13} />
+              <button className="btn btn-ghost" onClick={() => setSelectedEvidence(null)} style={{ padding: 6 }}>
+                <X size={16} />
               </button>
             </div>
-            <div style={{ padding: 14 }}>
-              <div style={{ marginBottom: 10 }}>
+            <div style={{ padding: 20 }}>
+              <div style={{ marginBottom: 16 }}>
                 {[
-                  { label: 'Source', value: evidenceRecord.source },
-                  { label: 'Revision', value: evidenceRecord.revision },
-                  { label: 'Timestamp', value: evidenceRecord.timestamp },
-                  { label: 'Category', value: evidenceRecord.category },
+                  { label: 'Source System', value: evidenceRecord.source },
+                  { label: 'Target Revision', value: evidenceRecord.revision },
+                  { label: 'Recorded At', value: evidenceRecord.timestamp },
+                  { label: 'Classification', value: evidenceRecord.category },
                 ].map((row, i) => (
-                  <div key={i} style={{ marginBottom: 6 }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 1 }}>{row.label}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{row.value}</div>
+                  <div key={i} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{row.label}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{row.value}</div>
                   </div>
                 ))}
               </div>
-              <div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Fact</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.65, background: 'var(--bg-base)', padding: 8, borderRadius: 5, border: '1px solid var(--border-subtle)' }}>
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Assertion Fact</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, background: 'var(--bg-base)', padding: 12, borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                   {evidenceRecord.fact}
                 </div>
               </div>
               {evidenceRecord.linkedEvidence.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Linked Evidence</div>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Supporting Evidence</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {evidenceRecord.linkedEvidence.map(id => (
-                      <div key={id} className="evidence-chip" onClick={() => setSelectedEvidence(id)}>{id}</div>
+                      <div key={id} onClick={() => setSelectedEvidence(id)} style={{ padding: '4px 10px', background: 'var(--bg-overlay)', border: '1px solid var(--border-default)', borderRadius: 16, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-mono)', transition: 'all 0.15s ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-muted)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
+                        {id}
+                      </div>
                     ))}
                   </div>
                 </div>

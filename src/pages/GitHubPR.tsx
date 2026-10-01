@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { GitPullRequest, X, GitCommit, XCircle, CheckCircle, Check, Folder, File, Play } from 'lucide-react'
-import { useState } from 'react'
+import { GitPullRequest, X, GitCommit, XCircle, CheckCircle, Check, Folder, File, Play, Pause } from 'lucide-react'
+import { useState, useRef } from 'react'
 
 export default function GitHubPR() {
   const navigate = useNavigate()
@@ -9,13 +9,31 @@ export default function GitHubPR() {
   const [activeRepoTab, setActiveRepoTab] = useState('Pull requests')
   const [activePRTab, setActivePRTab] = useState('Conversation')
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const isPausedRef = useRef(false)
   const [overlayText, setOverlayText] = useState('')
   const [activeDetails, setActiveDetails] = useState<string | null>(null)
   const [auraclePanelOpen, setAuraclePanelOpen] = useState(false)
 
+  const togglePause = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const nextPaused = !isPausedRef.current
+    setIsPaused(nextPaused)
+    isPausedRef.current = nextPaused
+  }
+
   const playJourney = async () => {
     setIsAutoPlaying(true)
-    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+    const sleep = async (ms: number) => {
+      let elapsed = 0;
+      const tick = 100;
+      while (elapsed < ms) {
+        if (!isPausedRef.current) {
+          elapsed += tick;
+        }
+        await new Promise(r => setTimeout(r, tick));
+      }
+    }
     
     if (step === '0') {
       setOverlayText('Ahmed: "The CI is green. Looks good, right?"')
@@ -513,7 +531,7 @@ export default function GitHubPR() {
       {/* Floating Demo Blob */}
       {(step === '0' || step === '1') && (
       <div 
-        onClick={isAutoPlaying ? undefined : playJourney}
+        onClick={isAutoPlaying ? togglePause : playJourney}
         style={{
           position: 'fixed',
           bottom: 30,
@@ -521,7 +539,7 @@ export default function GitHubPR() {
           width: 50,
           height: 50,
           borderRadius: '50%',
-          backgroundColor: '#60a5fa',
+          backgroundColor: isPaused ? '#f5a623' : '#60a5fa',
           boxShadow: '0 4px 15px rgba(96, 165, 250, 0.4)',
           display: 'flex',
           alignItems: 'center',
@@ -529,14 +547,18 @@ export default function GitHubPR() {
           cursor: 'pointer',
           zIndex: 9999,
           transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          opacity: isAutoPlaying ? 0 : 1,
-          transform: isAutoPlaying ? 'scale(0.8)' : 'scale(1)'
+          opacity: 1,
+          transform: 'scale(1)'
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = '#3b82f6'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = '#60a5fa'; }}
-        title="Continue Journey"
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = isPaused ? '#d97706' : '#3b82f6'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = isPaused ? '#f5a623' : '#60a5fa'; }}
+        title={isAutoPlaying ? (isPaused ? "Resume Journey" : "Pause Journey") : "Continue Journey"}
       >
-        <Play fill="white" color="white" size={20} style={{ marginLeft: 2 }} />
+        {isAutoPlaying && !isPaused ? (
+          <Pause fill="white" color="white" size={20} />
+        ) : (
+          <Play fill="white" color="white" size={20} style={{ marginLeft: 2 }} />
+        )}
       </div>
       )}
     </div>

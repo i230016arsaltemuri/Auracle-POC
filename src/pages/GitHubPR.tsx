@@ -1,26 +1,51 @@
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { GitPullRequest, X, GitCommit, XCircle, CheckCircle, Check, Folder, File, Play, Pause } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { GitPullRequest, X, GitCommit, XCircle, CheckCircle, Check, Folder, File, Play, Pause, Loader, Bot } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { useDemo } from '../context/DemoScenarioContext'
 
 export default function GitHubPR() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const step = searchParams.get('step') || '0'
+  const { phase, setPhase } = useDemo()
   const [activeRepoTab, setActiveRepoTab] = useState('Pull requests')
   const [activePRTab, setActivePRTab] = useState('Conversation')
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const isPausedRef = useRef(false)
   const [overlayText, setOverlayText] = useState('')
-  const [activeDetails, setActiveDetails] = useState<string | null>(null)
+  const [isPaused, setIsPaused] = useState(false)
   const [auraclePanelOpen, setAuraclePanelOpen] = useState(false)
+  const [isLegacyCIRunning, setIsLegacyCIRunning] = useState(phase === 'NO_AURACLE')
+  const [legacyCIText, setLegacyCIText] = useState(phase === 'NO_AURACLE' ? 'Running regression suite (ETA: ~1h 45m)...' : 'Successful in 1h 45m — 14,204 tests passed')
+  
+  useEffect(() => {
+    if (phase === 'NO_AURACLE') {
+      setIsLegacyCIRunning(true)
+      setLegacyCIText('Running regression suite (ETA: ~1h 45m)...')
+    } else {
+      setIsLegacyCIRunning(false)
+      setLegacyCIText('Successful in 1h 45m — 14,204 tests passed')
+    }
+  }, [phase])
 
+  const isPausedRef = useRef(false)
   const togglePause = (e: React.MouseEvent) => {
     e.stopPropagation()
     const nextPaused = !isPausedRef.current
     setIsPaused(nextPaused)
     isPausedRef.current = nextPaused
   }
+
+  // Simulate CI running when landing on the PR initially
+  const [isCIRunning, setIsCIRunning] = useState(phase === "CHANGE_CREATED")
+  useEffect(() => {
+    if (phase === "CHANGE_CREATED") {
+      const timer = setTimeout(() => {
+        setIsCIRunning(false)
+        setPhase("ANALYSIS_REVIEW")
+      }, 3000)
+      return () => clearTimeout(timer)
+    } else {
+        setIsCIRunning(false)
+    }
+  }, [phase, setPhase])
 
   const playJourney = async () => {
     setIsAutoPlaying(true)
@@ -35,58 +60,70 @@ export default function GitHubPR() {
       }
     }
     
-    if (step === '0') {
-      setOverlayText('Ahmed: "The CI is green. Looks good, right?"')
-      await sleep(2500)
-      setOverlayText('Ahmed: "But... which tests actually covered my new code?"')
-      await sleep(2500)
-      setOverlayText('Ahmed: "I need a better tool. Let me try Auracle."')
-      await sleep(2000)
+    if (phase === 'NO_AURACLE') {
+      setOverlayText('Ahmed: "Let\'s let CI run the regression suite. It takes 1h 45m, so let\'s fast forward..."')
+      await sleep(3500)
+      setIsLegacyCIRunning(false)
+      setLegacyCIText('Successful in 1h 45m — 14,204 tests passed')
+      await sleep(1000)
+      setOverlayText('Ahmed: "Wait, it passed? I added a new retry exhaustion branch..."')
+      await sleep(4000)
+      setOverlayText('Ahmed: "The existing regression suite doesn\'t know about my new code or dependencies. It didn\'t even test it!"')
+      await sleep(4500)
+      setOverlayText('Ahmed: "Green CI is dangerously misleading here. I need change-aware regression analysis. I\'ll install Auracle."')
+      await sleep(4500)
       setOverlayText('')
       setIsAutoPlaying(false)
-      navigate('/install-auracle')
-    } else if (step === '1') {
-      setOverlayText('Ahmed goes back to the IDE to fix the missing test coverage...')
+      navigate('/ide?step=install')
+    } else if (phase === 'ANALYSIS_REVIEW') {
+      setOverlayText('Ahmed: "Wait, why did my PR fail? Oh, Auracle found something."')
+      await sleep(3500)
+      setOverlayText('Ahmed: "Let me review the Regression Plan."')
       await sleep(2500)
       setOverlayText('')
       setIsAutoPlaying(false)
-      navigate('/?step=2')
+      navigate('/pull-requests/184/report')
+    } else if (phase === 'CHANGE_CREATED') {
+      setOverlayText('Ahmed: "Let\'s see what Auracle finds this time..."')
+      await sleep(3500)
+      setOverlayText('')
+      setIsAutoPlaying(false)
     }
   }
 
   return (
-    <div style={{ backgroundColor: '#0d1117', minHeight: '100%', color: '#c9d1d9', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji"', display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
-      {/* Fake GitHub Repo Header */}
-      <div style={{ padding: '16px 32px 0 32px', backgroundColor: '#0d1117', borderBottom: '1px solid #21262d', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold' }}>
-            AH
-          </div>
-          <div style={{ fontWeight: 600, fontSize: 16, color: '#58a6ff' }}>acme / payments-api</div>
+    <div style={{ backgroundColor: '#0d1117', height: '100%', overflowY: 'auto', color: '#c9d1d9', fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji"' }}>
+      {/* Top Navigation Bar */}
+      <div style={{ backgroundColor: '#010409', borderBottom: '1px solid #21262d', padding: '16px 32px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 32, height: 32, backgroundColor: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <GitPullRequest size={20} color="#24292f" />
         </div>
-        <div style={{ display: 'flex', gap: 24, fontSize: 14, fontWeight: 500, paddingLeft: 8 }}>
-          <span onClick={() => setActiveRepoTab('Code')} style={{ color: '#c9d1d9', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 12, cursor: 'pointer', borderBottom: activeRepoTab === 'Code' ? '2px solid #f78166' : '2px solid transparent' }}><span style={{ color: '#8b949e' }}>{"<>"}</span> Code</span>
-          <span onClick={() => setActiveRepoTab('Issues')} style={{ color: '#c9d1d9', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 12, cursor: 'pointer', borderBottom: activeRepoTab === 'Issues' ? '2px solid #f78166' : '2px solid transparent' }}><span style={{ color: '#8b949e' }}>⊙</span> Issues</span>
-          <span onClick={() => setActiveRepoTab('Pull requests')} style={{ color: '#c9d1d9', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 12, cursor: 'pointer', borderBottom: activeRepoTab === 'Pull requests' ? '2px solid #f78166' : '2px solid transparent' }}><GitPullRequest size={16} color="#8b949e" /> Pull requests</span>
-          <span onClick={() => setActiveRepoTab('Actions')} style={{ color: '#c9d1d9', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 12, cursor: 'pointer', borderBottom: activeRepoTab === 'Actions' ? '2px solid #f78166' : '2px solid transparent' }}><span style={{ color: '#8b949e' }}>▶</span> Actions</span>
-        </div>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>acme / payments-api</span>
       </div>
 
-      <div style={{ maxWidth: 1012, margin: '24px auto', width: '100%' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 32px' }}>
+        
+        {/* Repo Tabs */}
+        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid #21262d', paddingBottom: 0, marginBottom: 24, fontSize: 14 }}>
+          <span onClick={() => setActiveRepoTab('Code')} style={{ fontWeight: activeRepoTab === 'Code' ? 600 : 400, color: '#c9d1d9', borderBottom: activeRepoTab === 'Code' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 8, cursor: 'pointer' }}>Code</span>
+          <span onClick={() => setActiveRepoTab('Pull requests')} style={{ fontWeight: activeRepoTab === 'Pull requests' ? 600 : 400, color: '#c9d1d9', borderBottom: activeRepoTab === 'Pull requests' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 8, cursor: 'pointer' }}>Pull requests <span style={{ backgroundColor: '#161b22', padding: '2px 8px', borderRadius: 12, fontSize: 12, marginLeft: 4 }}>1</span></span>
+          <span onClick={() => setActiveRepoTab('Actions')} style={{ fontWeight: activeRepoTab === 'Actions' ? 600 : 400, color: '#c9d1d9', borderBottom: activeRepoTab === 'Actions' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 8, cursor: 'pointer' }}>Actions</span>
+        </div>
+
         {activeRepoTab === 'Pull requests' && (
-          <>
+        <>
             {/* PR Title Area */}
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 32, fontWeight: 400, marginBottom: 8 }}>
-            Add Partial Refund Support <span style={{ color: '#8b949e', fontWeight: 300 }}>#184</span>
+            Add guarded retry to refund processing <span style={{ color: '#8b949e', fontWeight: 300 }}>#184</span>
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-            <span style={{ backgroundColor: '#238636', color: '#ffffff', padding: '5px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500, fontSize: 14 }}>
+            <span style={{ backgroundColor: phase === 'MERGED' ? '#8957e5' : '#238636', color: '#ffffff', padding: '5px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500, fontSize: 14 }}>
               <GitPullRequest size={16} />
-              Open
+              {phase === 'MERGED' ? 'Merged' : 'Open'}
             </span>
             <span style={{ color: '#8b949e', marginLeft: 4 }}>
-              <strong style={{ color: '#c9d1d9' }}>ahmed</strong> wants to merge 1 commit into <code style={{ backgroundColor: '#161b22', padding: '3px 6px', borderRadius: 6, color: '#c9d1d9', fontSize: 13 }}>main</code> from <code style={{ backgroundColor: '#161b22', padding: '3px 6px', borderRadius: 6, color: '#c9d1d9', fontSize: 13 }}>feature/partial-refund</code>
+              <strong style={{ color: '#c9d1d9' }}>ahmeddev</strong> wants to merge 1 commit into <code style={{ backgroundColor: '#161b22', padding: '3px 6px', borderRadius: 6, color: '#c9d1d9', fontSize: 13 }}>main</code> from <code style={{ backgroundColor: '#161b22', padding: '3px 6px', borderRadius: 6, color: '#c9d1d9', fontSize: 13 }}>feat/refund-retry-policy</code>
             </span>
           </div>
         </div>
@@ -94,7 +131,7 @@ export default function GitHubPR() {
         {/* PR Tabs */}
         <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid #21262d', paddingBottom: 0, marginBottom: 24, fontSize: 14 }}>
           <span onClick={() => setActivePRTab('Conversation')} style={{ fontWeight: activePRTab === 'Conversation' ? 600 : 400, color: '#c9d1d9', borderBottom: activePRTab === 'Conversation' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 12, cursor: 'pointer' }}>Conversation</span>
-          <span onClick={() => setActivePRTab('Commits')} style={{ fontWeight: activePRTab === 'Commits' ? 600 : 400, color: '#c9d1d9', borderBottom: activePRTab === 'Commits' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 12, cursor: 'pointer' }}>Commits <span style={{ backgroundColor: '#161b22', padding: '2px 8px', borderRadius: 12, fontSize: 12, marginLeft: 4 }}>{step === '1' ? '1' : '2'}</span></span>
+          <span onClick={() => setActivePRTab('Commits')} style={{ fontWeight: activePRTab === 'Commits' ? 600 : 400, color: '#c9d1d9', borderBottom: activePRTab === 'Commits' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 12, cursor: 'pointer' }}>Commits <span style={{ backgroundColor: '#161b22', padding: '2px 8px', borderRadius: 12, fontSize: 12, marginLeft: 4 }}>1</span></span>
           <span onClick={() => setActivePRTab('Checks')} style={{ fontWeight: activePRTab === 'Checks' ? 600 : 400, color: '#c9d1d9', borderBottom: activePRTab === 'Checks' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 12, cursor: 'pointer' }}>Checks <span style={{ backgroundColor: '#161b22', padding: '2px 8px', borderRadius: 12, fontSize: 12, marginLeft: 4 }}>2</span></span>
           <span onClick={() => setActivePRTab('Files changed')} style={{ fontWeight: activePRTab === 'Files changed' ? 600 : 400, color: '#c9d1d9', borderBottom: activePRTab === 'Files changed' ? '2px solid #f78166' : '2px solid transparent', paddingBottom: 12, cursor: 'pointer' }}>Files changed <span style={{ backgroundColor: '#161b22', padding: '2px 8px', borderRadius: 12, fontSize: 12, marginLeft: 4 }}>8</span></span>
         </div>
@@ -110,17 +147,17 @@ export default function GitHubPR() {
             {/* PR Description Comment */}
             <div style={{ display: 'flex', gap: 16, marginBottom: 32, position: 'relative', zIndex: 1 }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', flexShrink: 0 }}>
-                AH
+                AD
               </div>
               <div style={{ flex: 1, border: '1px solid #30363d', borderRadius: 6, position: 'relative', backgroundColor: '#0d1117' }}>
                 <div style={{ position: 'absolute', left: -7, top: 11, width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderRight: '7px solid #30363d' }} />
                 <div style={{ position: 'absolute', left: -6, top: 12, width: 0, height: 0, borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '6px solid #161b22' }} />
                 
                 <div style={{ backgroundColor: '#161b22', padding: '8px 16px', borderBottom: '1px solid #30363d', borderTopLeftRadius: 6, borderTopRightRadius: 6, color: '#8b949e', fontSize: 13, display: 'flex', alignItems: 'center' }}>
-                  <strong style={{ color: '#c9d1d9', marginRight: 4 }}>ahmed</strong> commented 12 minutes ago
+                  <strong style={{ color: '#c9d1d9', marginRight: 4 }}>ahmeddev</strong> commented 12 minutes ago
                 </div>
                 <div style={{ padding: 16, fontSize: 14, lineHeight: 1.5, color: '#c9d1d9' }}>
-                  Introduces partial refund support for cases where refund amount is less than the original payment.
+                  Introduces retry handling for transient payment gateway errors in the refund flow. The retry policy is guarded by a configurable maximum retry count and exponential backoff.
                 </div>
               </div>
             </div>
@@ -133,31 +170,32 @@ export default function GitHubPR() {
                 </div>
               </div>
               <div style={{ paddingTop: 6, fontSize: 13, color: '#8b949e', flex: 1, transform: 'translateX(-22px)' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#f5a623', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', fontSize: 9, verticalAlign: 'middle', marginRight: 8 }}>AH</div>
-                <strong style={{ color: '#c9d1d9' }}>ahmed</strong> added a commit: 
-                <code style={{ marginLeft: 8, color: '#58a6ff', fontFamily: 'monospace' }}>a92f31e</code> Support guarded retries
+                <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#f5a623', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', fontSize: 9, verticalAlign: 'middle', marginRight: 8 }}>MC</div>
+                <strong style={{ color: '#c9d1d9' }}>ahmeddev</strong> added a commit: 
+                <code style={{ marginLeft: 8, color: '#58a6ff', fontFamily: 'monospace' }}>a92f31e</code> Add guarded retry to refund processing
               </div>
             </div>
 
-            {step === '2' && (
-            <div style={{ display: 'flex', gap: 16, marginBottom: 24, position: 'relative', zIndex: 1 }}>
-              <div style={{ marginLeft: 26, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                <div style={{ width: 32, height: 32, backgroundColor: '#161b22', border: '1px solid #21262d', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateX(-22px)' }}>
-                  <GitCommit size={16} color="#8b949e" />
-                </div>
-              </div>
-              <div style={{ paddingTop: 6, fontSize: 13, color: '#8b949e', flex: 1, transform: 'translateX(-22px)' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#f5a623', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', fontSize: 9, verticalAlign: 'middle', marginRight: 8 }}>AH</div>
-                <strong style={{ color: '#c9d1d9' }}>ahmed</strong> added a commit: 
-                <code style={{ marginLeft: 8, color: '#58a6ff', fontFamily: 'monospace' }}>b14f77c</code> Add test for retry exhaustion
-              </div>
-            </div>
-            )}
-
-              {/* Status Checks Block */}
+            {/* Status Checks Block */}
             <div style={{ border: '1px solid #30363d', borderRadius: 6, marginLeft: 56, position: 'relative', zIndex: 1, backgroundColor: '#0d1117' }}>
               <div style={{ padding: 16, backgroundColor: '#161b22', borderBottom: '1px solid #30363d', borderTopLeftRadius: 6, borderTopRightRadius: 6, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                {step === '1' ? (
+                {isCIRunning ? (
+                  <>
+                    <Loader size={20} color="#d2a8ff" className="spin" style={{ marginTop: 2 }} />
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ fontSize: 15, color: '#c9d1d9' }}>Some checks haven't completed yet</strong>
+                      <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>1 pending check</div>
+                    </div>
+                  </>
+                ) : phase === 'NO_AURACLE' ? (
+                  <>
+                    {isLegacyCIRunning ? <Loader size={20} color="#d2a8ff" className="spin" style={{ marginTop: 2 }} /> : <CheckCircle size={20} color="#238636" style={{ marginTop: 2 }} />}
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ fontSize: 15, color: '#c9d1d9' }}>{isLegacyCIRunning ? 'Some checks haven\'t completed yet' : 'All checks have passed'}</strong>
+                      <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>{isLegacyCIRunning ? '1 pending and 2 successful checks' : '3 successful checks'}</div>
+                    </div>
+                  </>
+                ) : phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED' ? (
                   <>
                     <XCircle size={20} color="#f85149" style={{ marginTop: 2 }} />
                     <div style={{ flex: 1 }}>
@@ -170,131 +208,158 @@ export default function GitHubPR() {
                     <CheckCircle size={20} color="#238636" style={{ marginTop: 2 }} />
                     <div style={{ flex: 1 }}>
                       <strong style={{ fontSize: 15, color: '#c9d1d9' }}>All checks have passed</strong>
-                      <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>{step === '0' ? '2 successful checks' : '3 successful checks'}</div>
+                      <div style={{ fontSize: 13, color: '#8b949e', marginTop: 4 }}>3 successful checks</div>
                     </div>
                   </>
                 )}
               </div>
               
-              {step !== '0' && (
               <div style={{ borderBottom: '1px solid #30363d' }}>
-                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #30363d' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {step === '1' ? <X size={16} color="#f85149" /> : <Check size={16} color="#238636" />}
-                    <strong style={{ color: '#c9d1d9' }}>auracle / test-intelligence (pull_request)</strong>
-                    {step === '1' ? (
+                    <Check size={16} color="#238636" />
+                    <strong style={{ color: '#c9d1d9' }}>build / Node (pull_request)</strong>
+                    <span style={{ color: '#8b949e' }}>Successful in 45s</span>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #30363d' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Check size={16} color="#238636" />
+                    <strong style={{ color: '#c9d1d9' }}>lint / ESLint (pull_request)</strong>
+                    <span style={{ color: '#8b949e' }}>Successful in 12s</span>
+                  </div>
+                </div>
+                
+                {phase !== 'NO_AURACLE' && (
+                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, borderBottom: '1px solid #30363d' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {isCIRunning ? (
+                        <Loader size={16} color="#d2a8ff" className="spin" />
+                    ) : phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED' ? <X size={16} color="#f85149" /> : <Check size={16} color="#238636" />}
+                    <strong style={{ color: '#c9d1d9' }}>Auracle Regression Analysis</strong>
+                    {isCIRunning ? (
+                      <span style={{ color: '#8b949e' }}>Running analysis...</span>
+                    ) : phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED' ? (
                       <span style={{ color: '#8b949e' }}>Failing after 4m 12s — GATE: FAIL / REVIEW REQUIRED</span>
                     ) : (
                       <span style={{ color: '#8b949e' }}>Successful in 1m 02s — SATISFIED WITHIN SUPPORTED SCOPE</span>
                     )}
                   </div>
+                  {!isCIRunning && (
                   <button 
                     onClick={() => setAuraclePanelOpen(v => !v)}
                     style={{ backgroundColor: 'transparent', border: 'none', color: '#58a6ff', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500 }}
                   >
                     {auraclePanelOpen ? 'Hide' : 'Details'}
                   </button>
-                </div>
-
-                {/* Inline Auracle Report Panel */}
-                {auraclePanelOpen && (
-                <div style={{ margin: '0 16px 16px', backgroundColor: '#010409', border: '1px solid #30363d', borderRadius: 8, overflow: 'hidden' }}>
-                  {/* Panel Header */}
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #30363d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0d1117' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: step === '1' ? '#f85149' : '#238636' }} />
-                      <span style={{ fontWeight: 700, fontSize: 14, color: '#c9d1d9', fontFamily: 'monospace' }}>Auracle Gate Report</span>
-                      <span style={{ fontSize: 11, backgroundColor: step === '1' ? 'rgba(248,81,73,0.15)' : 'rgba(35,134,54,0.15)', color: step === '1' ? '#f85149' : '#3fb950', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>GATE: {step === '1' ? 'FAIL' : 'PASS'}</span>
-                    </div>
-                    <button onClick={() => navigate('/pull-requests/184/report')} style={{ backgroundColor: '#238636', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                      Open in Auracle Dashboard →
-                    </button>
-                  </div>
-
-                  {/* Stats Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid #21262d' }}>
-                    {[
-                      { label: 'Files Changed', value: '2' },
-                      { label: 'Functions Affected', value: '7' },
-                      { label: 'Tests Selected', value: '23' },
-                      { label: 'Uncovered Branches', value: step === '1' ? '1' : '0', alert: step === '1' },
-                    ].map((stat, i) => (
-                      <div key={i} style={{ padding: '14px 16px', borderRight: i < 3 ? '1px solid #21262d' : 'none', textAlign: 'center' }}>
-                        <div style={{ fontSize: 22, fontWeight: 700, color: stat.alert ? '#f85149' : '#c9d1d9' }}>{stat.value}</div>
-                        <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>{stat.label}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Changed files */}
-                  <div style={{ padding: 16, borderBottom: '1px solid #21262d' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#8b949e', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Changed Files</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #21262d', color: '#c9d1d9' }}>
-                        <span>src/payments/service.py</span>
-                        <span style={{ color: '#3fb950' }}>+2 <span style={{ color: '#f85149' }}>-0</span></span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', color: '#c9d1d9' }}>
-                        <span>src/payments/models.py</span>
-                        <span style={{ color: '#3fb950' }}>+1 <span style={{ color: '#f85149' }}>-0</span></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Gate Failure Reason */}
-                  {step === '1' && (
-                  <div style={{ padding: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#8b949e', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate Failure Reason</div>
-                    <div style={{ backgroundColor: 'rgba(248,81,73,0.08)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 6, padding: 12, fontFamily: 'monospace', fontSize: 13 }}>
-                      <div style={{ color: '#f85149', fontWeight: 600, marginBottom: 6 }}>⚠ Uncovered Branch Detected</div>
-                      <div style={{ color: '#c9d1d9' }}>service.py:129 — <code style={{ color: '#f85149' }}>if refund_amount &lt; original_payment.amount:</code></div>
-                      <div style={{ color: '#8b949e', marginTop: 4, fontSize: 12 }}>This branch was introduced by this PR but no test exercises it.</div>
-                      <div style={{ color: '#8b949e', marginTop: 8, fontSize: 12 }}>Add a test that calls <code>service.refund()</code> with <code>refund_amount &lt; original_payment.amount</code></div>
-                    </div>
-                  </div>
                   )}
                 </div>
                 )}
               </div>
-              )}
-              
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #30363d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Check size={16} color="#238636" />
-                  <strong style={{ color: '#c9d1d9' }}>codecov / patch</strong>
-                  <span style={{ color: '#8b949e' }}>Successful in 45s — Coverage: 87%</span>
+
+              {/* Inline Auracle Report Panel */}
+              {auraclePanelOpen && phase !== 'NO_AURACLE' && (
+              <div style={{ margin: '0 16px 16px', backgroundColor: '#010409', border: '1px solid #30363d', borderRadius: 8, overflow: 'hidden' }}>
+                {/* Panel Header */}
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #30363d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0d1117' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: (phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') ? '#f85149' : '#238636' }} />
+                    <span style={{ fontWeight: 700, fontSize: 14, color: '#c9d1d9', fontFamily: 'monospace' }}>Auracle Regression Analysis</span>
+                    <span style={{ fontSize: 11, backgroundColor: (phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') ? 'rgba(248,81,73,0.15)' : 'rgba(35,134,54,0.15)', color: (phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') ? '#f85149' : '#3fb950', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>GATE: {(phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') ? 'FAIL' : 'PASS'}</span>
+                  </div>
+                  <button onClick={() => navigate('/pull-requests/184/report')} style={{ backgroundColor: '#238636', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                    Open in Auracle Dashboard →
+                  </button>
                 </div>
-                <button onClick={() => setActiveDetails('codecov')} style={{ backgroundColor: 'transparent', border: 'none', color: '#58a6ff', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
-                  Details
-                </button>
+
+                {/* Stats Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid #21262d' }}>
+                  {[
+                    { label: 'Files Changed', value: '8' },
+                    { label: 'Functions Affected', value: '17' },
+                    { label: 'Tests Selected', value: '24' },
+                    { label: 'Uncovered Branches', value: (phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') ? '1' : '0', alert: (phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') },
+                  ].map((stat, i) => (
+                    <div key={i} style={{ padding: '14px 16px', borderRight: i < 3 ? '1px solid #21262d' : 'none', textAlign: 'center' }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: stat.alert ? '#f85149' : '#c9d1d9' }}>{stat.value}</div>
+                      <div style={{ fontSize: 11, color: '#8b949e', marginTop: 2 }}>{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Changed files */}
+                <div style={{ padding: 16, borderBottom: '1px solid #21262d' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#8b949e', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Changed Files</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #21262d', color: '#c9d1d9' }}>
+                      <span>src/payments/service.py</span>
+                      <span style={{ color: '#3fb950' }}>+2 <span style={{ color: '#f85149' }}>-0</span></span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', color: '#c9d1d9' }}>
+                      <span>src/payments/models.py</span>
+                      <span style={{ color: '#3fb950' }}>+1 <span style={{ color: '#f85149' }}>-0</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gate Failure Reason */}
+                {(phase === 'ANALYSIS_REVIEW' || phase === 'CANDIDATE_GENERATED' || phase === 'CANDIDATE_ACCEPTED') && (
+                <div style={{ padding: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#8b949e', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gate Failure Reason</div>
+                  <div style={{ backgroundColor: 'rgba(248,81,73,0.08)', border: '1px solid rgba(248,81,73,0.3)', borderRadius: 6, padding: 12, fontFamily: 'monospace', fontSize: 13 }}>
+                    <div style={{ color: '#f85149', fontWeight: 600, marginBottom: 6 }}>⚠ Test Failure</div>
+                    <div style={{ color: '#c9d1d9', marginBottom: 12 }}>test_refund_failure FAILED — a directly relevant selected test failed</div>
+                    <div style={{ color: '#f85149', fontWeight: 600, marginBottom: 6 }}>⚠ Material Testing Gap</div>
+                    <div style={{ color: '#c9d1d9' }}>service.py:159-167 — <code style={{ color: '#f85149' }}>retry exhaustion branch uncovered</code></div>
+                  </div>
+                </div>
+                )}
               </div>
+              )}
 
               <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, borderBottomLeftRadius: 6, borderBottomRightRadius: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Check size={16} color="#238636" />
-                  <strong style={{ color: '#c9d1d9' }}>pytest / unit-tests (pull_request)</strong>
-                  <span style={{ color: '#8b949e' }}>Successful in 32m 41s — {step === '2' ? '2,148' : '2,147'} tests passed</span>
+                  {isLegacyCIRunning ? <Loader size={16} color="#d2a8ff" className="spin" /> : <Check size={16} color="#238636" />}
+                  <strong style={{ color: '#c9d1d9' }}>CI / regression-suite (pull_request)</strong>
+                  <span style={{ color: '#8b949e' }}>{legacyCIText}</span>
                 </div>
-                <button onClick={() => setActiveDetails('pytest')} style={{ backgroundColor: 'transparent', border: 'none', color: '#58a6ff', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+                <button onClick={() => {}} style={{ backgroundColor: 'transparent', border: 'none', color: '#58a6ff', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
                   Details
                 </button>
               </div>
             </div>
 
+            {phase === 'NO_AURACLE' && (
+            <div style={{ marginTop: 24, marginLeft: 56, padding: 20, border: '1px solid #30363d', borderRadius: 6, backgroundColor: '#161b22', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#21262d', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Bot size={20} color="#58a6ff" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, color: '#c9d1d9', margin: '0 0 4px 0' }}>Get deeper change-aware regression analysis with Auracle</h3>
+                  <p style={{ fontSize: 13, color: '#8b949e', margin: 0 }}>Green CI doesn't mean your change is safe. Ensure you haven't missed any material testing gaps.</p>
+                </div>
+              </div>
+              <button onClick={() => navigate('/ide?step=install')} style={{ backgroundColor: '#238636', color: '#ffffff', border: '1px solid rgba(240,246,252,0.1)', padding: '6px 12px', borderRadius: 6, fontWeight: 500, cursor: 'pointer', fontSize: 14 }}>
+                Install in IDE
+              </button>
+            </div>
+            )}
+
             {/* Merge Button */}
             <div style={{ marginTop: 24, marginLeft: 56, padding: 16, border: '1px solid #30363d', borderRadius: 6, backgroundColor: '#0d1117', display: 'flex', alignItems: 'flex-start', gap: 16, position: 'relative', zIndex: 1 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: step === '1' ? '#da3633' : '#238636', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {step === '1' ? <X size={18} color="#ffffff" /> : <GitPullRequest size={16} color="#ffffff" />}
+              <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: (phase !== 'EXECUTED' && phase !== 'MERGED' && phase !== 'NO_AURACLE') ? '#da3633' : '#238636', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {(phase !== 'EXECUTED' && phase !== 'MERGED' && phase !== 'NO_AURACLE') ? <X size={18} color="#ffffff" /> : <GitPullRequest size={16} color="#ffffff" />}
               </div>
               <div style={{ flex: 1 }}>
                 <strong style={{ fontSize: 14, color: '#c9d1d9' }}>Merge pull request</strong>
-                {step === '1' ? (
+                {(phase !== 'EXECUTED' && phase !== 'MERGED' && phase !== 'NO_AURACLE') ? (
                   <div style={{ fontSize: 13, color: '#8b949e' }}>Merge is blocked because checks have failed.</div>
                 ) : (
                   <div style={{ fontSize: 13, color: '#8b949e' }}>You can merge this pull request automatically.</div>
                 )}
               </div>
-              {step === '1' ? (
+              {(phase !== 'EXECUTED' && phase !== 'MERGED' && phase !== 'NO_AURACLE') ? (
                 <button disabled style={{ backgroundColor: '#238636', color: '#ffffff', border: '1px solid rgba(240,246,252,0.1)', borderRadius: 6, padding: '5px 16px', fontSize: 14, fontWeight: 500, opacity: 0.6, cursor: 'not-allowed' }}>
                   Merge pull request
                 </button>
@@ -322,9 +387,9 @@ export default function GitHubPR() {
               <strong style={{ color: '#c9d1d9', display: 'block', marginBottom: 8 }}>Assignees</strong>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', fontSize: 9 }}>
-                  AH
+                  MC
                 </div>
-                <span style={{ color: '#c9d1d9', fontWeight: 600 }}>ahmed</span>
+                <span style={{ color: '#c9d1d9', fontWeight: 600 }}>ahmeddev</span>
               </div>
             </div>
           </div>
@@ -336,16 +401,9 @@ export default function GitHubPR() {
             <h3 style={{ marginBottom: 16 }}>Commits</h3>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #30363d' }}>
               <GitCommit size={16} color="#8b949e" />
-              <strong style={{ color: '#c9d1d9' }}>ahmed</strong> Support guarded retries
+              <strong style={{ color: '#c9d1d9' }}>ahmeddev</strong> Add guarded retry to refund processing
               <code style={{ marginLeft: 'auto', color: '#58a6ff' }}>a92f31e</code>
             </div>
-            {step === '2' && (
-            <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '12px 0' }}>
-              <GitCommit size={16} color="#8b949e" />
-              <strong style={{ color: '#c9d1d9' }}>ahmed</strong> Add test for retry exhaustion
-              <code style={{ marginLeft: 'auto', color: '#58a6ff' }}>b14f77c</code>
-            </div>
-            )}
           </div>
         )}
 
@@ -370,8 +428,8 @@ export default function GitHubPR() {
         {activeRepoTab === 'Code' && (
           <div style={{ border: '1px solid #30363d', borderRadius: 6, backgroundColor: '#0d1117', overflow: 'hidden' }}>
             <div style={{ padding: 16, backgroundColor: '#161b22', borderBottom: '1px solid #30363d', display: 'flex', alignItems: 'center', gap: 16, color: '#8b949e', fontSize: 13 }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', fontSize: 9 }}>AH</div>
-              <strong style={{ color: '#c9d1d9' }}>ahmed</strong> Add Partial Refund Support
+              <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#f5a623', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontWeight: 'bold', fontSize: 9 }}>AD</div>
+              <strong style={{ color: '#c9d1d9' }}>ahmeddev</strong> Add guarded retry to refund processing
               <span style={{ marginLeft: 'auto' }}>12 minutes ago</span>
             </div>
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid #21262d', color: '#c9d1d9', fontSize: 14 }}>
@@ -383,184 +441,36 @@ export default function GitHubPR() {
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid #21262d', color: '#c9d1d9', fontSize: 14 }}>
               <File size={16} color="#8b949e" /> <span style={{ cursor: 'pointer' }}>README.md</span>
             </div>
-            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 16, color: '#c9d1d9', fontSize: 14 }}>
-              <File size={16} color="#8b949e" /> <span style={{ cursor: 'pointer' }}>package.json</span>
-            </div>
-          </div>
-        )}
-
-        {activeRepoTab === 'Issues' && (
-          <div>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-              <input type="text" placeholder="is:issue is:open " style={{ flex: 1, padding: '5px 12px', backgroundColor: '#0d1117', border: '1px solid #30363d', borderRadius: 6, color: '#c9d1d9', fontSize: 14 }} disabled />
-              <button style={{ backgroundColor: '#238636', color: '#ffffff', border: '1px solid rgba(240,246,252,0.1)', borderRadius: 6, padding: '5px 16px', fontSize: 14, fontWeight: 500 }}>New issue</button>
-            </div>
-            <div style={{ border: '1px solid #30363d', borderRadius: 6, backgroundColor: '#0d1117' }}>
-              <div style={{ padding: 16, backgroundColor: '#161b22', borderBottom: '1px solid #30363d', borderTopLeftRadius: 6, borderTopRightRadius: 6, fontWeight: 600, fontSize: 14 }}>
-                <span style={{ color: '#c9d1d9', marginRight: 16 }}>⊙ 12 Open</span> <span style={{ color: '#8b949e', fontWeight: 400 }}>✓ 45 Closed</span>
-              </div>
-              <div style={{ padding: 16, display: 'flex', gap: 12, borderBottom: '1px solid #21262d' }}>
-                <span style={{ color: '#238636' }}>⊙</span>
-                <div>
-                  <div style={{ color: '#c9d1d9', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Fix intermittent gateway timeouts</div>
-                  <div style={{ color: '#8b949e', fontSize: 12 }}>#183 opened 2 days ago by ahmed</div>
-                </div>
-              </div>
-              <div style={{ padding: 16, display: 'flex', gap: 12 }}>
-                <span style={{ color: '#238636' }}>⊙</span>
-                <div>
-                  <div style={{ color: '#c9d1d9', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Update pytest dependencies</div>
-                  <div style={{ color: '#8b949e', fontSize: 12 }}>#182 opened 5 days ago by dependabot</div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
         {activeRepoTab === 'Actions' && (
-          <div style={{ display: 'flex', gap: 24 }}>
-            <div style={{ width: 250 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 16, color: '#c9d1d9' }}>Workflows</div>
-              <div style={{ padding: '8px 16px', backgroundColor: '#161b22', borderRadius: 6, color: '#c9d1d9', fontSize: 14, cursor: 'pointer', marginBottom: 4 }}>All workflows</div>
-              <div style={{ padding: '8px 16px', color: '#8b949e', fontSize: 14, cursor: 'pointer' }}>auracle-test-intelligence</div>
-              <div style={{ padding: '8px 16px', color: '#8b949e', fontSize: 14, cursor: 'pointer' }}>pytest-unit-tests</div>
-            </div>
-            <div style={{ flex: 1, border: '1px solid #30363d', borderRadius: 6, backgroundColor: '#0d1117' }}>
-              <div style={{ padding: 16, backgroundColor: '#161b22', borderBottom: '1px solid #30363d', borderTopLeftRadius: 6, borderTopRightRadius: 6, fontWeight: 600, fontSize: 14 }}>
-                2 workflow runs
-              </div>
-              <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 16, borderBottom: '1px solid #21262d' }}>
-                {step === '1' ? <XCircle size={20} color="#f85149" /> : <CheckCircle size={20} color="#238636" />}
-                <div>
-                  <div style={{ color: '#c9d1d9', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Add Partial Refund Support</div>
-                  <div style={{ color: '#8b949e', fontSize: 12 }}>auracle-test-intelligence #184: Commit <code style={{ color: '#58a6ff' }}>a92f31e</code> pushed by ahmed</div>
-                </div>
-              </div>
-              <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-                <CheckCircle size={20} color="#238636" />
-                <div>
-                  <div style={{ color: '#c9d1d9', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Add Partial Refund Support</div>
-                  <div style={{ color: '#8b949e', fontSize: 12 }}>pytest-unit-tests #184: Commit <code style={{ color: '#58a6ff' }}>a92f31e</code> pushed by ahmed</div>
-                </div>
-              </div>
-            </div>
+          <div style={{ padding: 48, border: '1px solid #30363d', borderRadius: 6, backgroundColor: '#0d1117', textAlign: 'center', color: '#8b949e' }}>
+            <h2>GitHub Actions</h2>
+            <p>Workflows placeholder</p>
           </div>
         )}
 
       </div>
-
-      {/* Details Modals */}
-      {activeDetails === 'codecov' && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setActiveDetails(null)}>
-          <div style={{ backgroundColor: '#161b22', padding: 32, borderRadius: 12, border: '1px solid #30363d', width: 560, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <CheckCircle size={20} color="#238636" />
-                <strong style={{ color: '#c9d1d9', fontSize: 16 }}>codecov / patch</strong>
-              </div>
-              <button onClick={() => setActiveDetails(null)} style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20 }}>×</button>
-            </div>
-            <div style={{ backgroundColor: '#0d1117', borderRadius: 8, padding: 20, fontFamily: 'monospace', fontSize: 13, color: '#c9d1d9', lineHeight: 1.8 }}>
-              <div style={{ color: '#3fb950' }}>✓ Patch coverage: 87.00%</div>
-              <div style={{ color: '#8b949e', marginTop: 8 }}>Files changed in this PR:</div>
-              <div style={{ marginTop: 8 }}>  src/payments/service.py</div>
-              <div style={{ color: '#8b949e' }}>    Lines covered: 6/7 (85.7%)</div>
-              <div style={{ color: '#f85149', marginTop: 8 }}>  ! Line 129: if refund_amount &lt; original_payment.amount:</div>
-              <div style={{ color: '#f85149' }}>    ↑ This branch was NOT executed in any test</div>
-            </div>
-            <div style={{ marginTop: 16, color: '#8b949e', fontSize: 13 }}>Coverage meets threshold (≥ 80%). Gate: PASS</div>
-          </div>
-        </div>
-      )}
-
-      {activeDetails === 'pytest' && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setActiveDetails(null)}>
-          <div style={{ backgroundColor: '#161b22', padding: 32, borderRadius: 12, border: '1px solid #30363d', width: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <CheckCircle size={20} color="#238636" />
-                <strong style={{ color: '#c9d1d9', fontSize: 16 }}>pytest / unit-tests (pull_request)</strong>
-              </div>
-              <button onClick={() => setActiveDetails(null)} style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 20 }}>×</button>
-            </div>
-            <div style={{ backgroundColor: '#0d1117', borderRadius: 8, padding: 20, fontFamily: 'monospace', fontSize: 13, color: '#c9d1d9', lineHeight: 1.8 }}>
-              <div>============================= test session starts ==============================</div>
-              <div>platform linux -- Python 3.11.4, pytest-7.4.0</div>
-              <div style={{ marginTop: 8 }}>collected {step === '2' ? '3,451' : '3,450'} items</div>
-              <div style={{ marginTop: 8 }}>tests/unit/payments/test_auth.py ........                           [  0%]</div>
-              <div>tests/unit/payments/test_billing.py ...............                     [  1%]</div>
-              <div>tests/unit/payments/test_cache.py .....                                 [  1%]</div>
-              <div>tests/unit/payments/test_service.py .....                               [  2%]</div>
-              <div style={{ color: '#8b949e' }}>... (running all {step === '2' ? '3,451' : '3,450'} tests) ...</div>
-              <div style={{ marginTop: 8, color: '#3fb950' }}>{step === '2' ? '3,451' : '3,450'} passed in 32m 41s</div>
-            </div>
-            <div style={{ marginTop: 16, color: '#8b949e', fontSize: 13 }}>All tests passed. But were the right tests run? Auracle can tell you.</div>
-          </div>
-        </div>
-      )}
-      {overlayText && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          zIndex: 10000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div style={{
-            backgroundColor: '#161b22',
-            padding: '24px 48px',
-            borderRadius: 12,
-            border: '1px solid #30363d',
-            color: '#c9d1d9',
-            fontSize: 20,
-            fontWeight: 600,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
-          }}>
-            {overlayText}
-          </div>
-        </div>
-      )}
-
-      {/* Floating Demo Blob */}
-      {(step === '0' || step === '1') && (
-      <div 
-        onClick={isAutoPlaying ? togglePause : playJourney}
-        style={{
-          position: 'fixed',
-          bottom: 30,
-          right: 30,
-          width: 50,
-          height: 50,
-          borderRadius: '50%',
-          backgroundColor: isPaused ? '#f5a623' : '#60a5fa',
-          boxShadow: '0 4px 15px rgba(96, 165, 250, 0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 9999,
-          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          opacity: 1,
-          transform: 'scale(1)'
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = isPaused ? '#d97706' : '#3b82f6'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = isPaused ? '#f5a623' : '#60a5fa'; }}
-        title={isAutoPlaying ? (isPaused ? "Resume Journey" : "Pause Journey") : "Continue Journey"}
-      >
-        {isAutoPlaying && !isPaused ? (
-          <Pause fill="white" color="white" size={20} />
+      
+      {/* Simulation Playback Controls Overlay */}
+      <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', backgroundColor: 'rgba(22,27,34,0.9)', backdropFilter: 'blur(10px)', border: '1px solid #30363d', borderRadius: 32, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 100 }}>
+        {overlayText ? (
+          <span style={{ color: '#c9d1d9', fontSize: 14, fontWeight: 500 }}>{overlayText}</span>
         ) : (
-          <Play fill="white" color="white" size={20} style={{ marginLeft: 2 }} />
+          <span style={{ color: '#8b949e', fontSize: 14 }}>{phase === 'MERGED' ? 'Simulation Complete' : 'Auracle Demo Sandbox'}</span>
         )}
+        
+        {phase === 'CHANGE_CREATED' || phase === 'ANALYSIS_REVIEW' || phase === 'NO_AURACLE' ? (
+        <button 
+          onClick={isAutoPlaying ? togglePause : playJourney}
+          disabled={!overlayText && isAutoPlaying}
+          style={{ backgroundColor: '#238636', color: '#ffffff', border: 'none', borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: (!overlayText && isAutoPlaying) ? 0.5 : 1 }}
+        >
+          {isAutoPlaying ? (isPaused ? <><Play size={14} /> Resume</> : <><Pause size={14} /> Pause</>) : <><Play size={14} /> Play Demo Journey</>}
+        </button>
+        ) : null}
       </div>
-      )}
     </div>
   )
 }

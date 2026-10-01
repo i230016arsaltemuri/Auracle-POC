@@ -41,7 +41,7 @@ export default function PullRequests() {
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
                     Add guarded retry to refund processing
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>feat/refund-retry-policy · Maya Chen</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>feat/refund-retry-policy · Ahmed</div>
                 </td>
                 <td><span className="badge badge-fail">FAIL</span></td>
                 <td><span className="badge badge-high">HIGH</span></td>

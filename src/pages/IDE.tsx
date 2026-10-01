@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 
 import { FILES } from '../data/ideContent'
+import { useDemo } from '../context/DemoScenarioContext'
 
 export default function IDE() {
   const navigate = useNavigate()
@@ -10,8 +11,9 @@ export default function IDE() {
   const [searchParams] = useSearchParams()
   const step = searchParams.get('step') || '1'
   const isInstallStep = step === 'install' || location.pathname === '/install-auracle'
+  const { setPhase } = useDemo()
   const [terminalOutput, setTerminalOutput] = useState<string[]>([
-    'mayachen@MacBook-Pro payments-api % git status',
+    'ahmeddev@MacBook-Pro payments-api % git status',
     'On branch feat/refund-retry-policy',
     'Changes not staged for commit:',
     '  (use "git add <file>..." to update what will be committed)',
@@ -108,34 +110,36 @@ export default function IDE() {
       setTerminalOutput(prev => [...prev, '', '# Auracle GitHub App is now watching this PR...'])
       await sleep(2000)
       setIsAutoPlaying(false)
+      setPhase("CHANGE_CREATED")
       navigate('/github/pr/184?step=1')
       return
     }
 
     await sleep(500)
-    setTerminalOutput(prev => [...prev, 'ahmed@MacBook-Pro payments-api % git checkout -b feature/partial-refund'])
+    setTerminalOutput(prev => [...prev, 'ahmeddev@MacBook-Pro payments-api % git checkout -b feat/refund-retry-policy'])
     await sleep(800)
-    setTerminalOutput(prev => [...prev, "Switched to a new branch 'feature/partial-refund'"])
+    setTerminalOutput(prev => [...prev, "Switched to a new branch 'feat/refund-retry-policy'"])
     await sleep(1500)
     
     setActiveFile('src/payments/service.py')
     await sleep(1000)
     
     // Animate typing the change
-    const codeToType = "        if refund_amount < original_payment.amount:\n            self.process_partial_refund(original_payment)"
+    const codeToType = "            except TransientGatewayError as exc:\n                last_exc = exc\n                retries += 1\n\n        # === All retries exhausted ===\n        raise RetryExhaustedException(\n            f\"Refund for {order_id} failed after {max_retries} retries.\"\n        ) from last_exc"
     
-    // Pre-insert two empty lines at index 10 so we don't create a sparse array
     setFileContents(prev => {
         const next = { ...prev }
         const file = [...next['src/payments/service.py']]
-        file.splice(10, 0, 
-            { n: 129, t: '', c: '', cov: 'uncovered', changed: true },
-            { n: 130, t: '', c: '', cov: 'uncovered', changed: true }
+        file.splice(18, 8, 
+            { n: 138, t: '            ', c: '', cov: 'uncovered', changed: true },
+            { n: 139, t: '                ', c: '', cov: 'uncovered', changed: true },
+            { n: 140, t: '                ', c: '', cov: 'uncovered', changed: true },
+            { n: 141, t: '                ', c: '', cov: 'uncovered', changed: true },
+            { n: 142, t: '        ', c: '', cov: 'uncovered', changed: true },
+            { n: 143, t: '        ', c: '', cov: 'uncovered', changed: true },
+            { n: 144, t: '            ', c: '', cov: 'uncovered', changed: true },
+            { n: 145, t: '        ', c: '', cov: 'uncovered', changed: true }
         )
-        // Shift line numbers for the rest of the file
-        for (let j = 12; j < file.length; j++) {
-            file[j] = { ...file[j], n: file[j].n + 2 }
-        }
         next['src/payments/service.py'] = file
         return next
     })
@@ -149,70 +153,57 @@ export default function IDE() {
             const next = { ...prev }
             const file = [...next['src/payments/service.py']]
             
-            file[10] = { ...file[10], c: lines[0] }
-            if (lines.length > 1) {
-                file[11] = { ...file[11], c: lines[1] }
+            for (let j = 0; j < lines.length; j++) {
+                if (file[18+j]) {
+                    file[18+j] = { ...file[18+j], c: lines[j] }
+                }
             }
             next['src/payments/service.py'] = file
             return next
         })
-        await sleep(25)
+        await sleep(15)
     }
     
     await sleep(1500)
-    setTerminalOutput(prev => [...prev, 'ahmed@MacBook-Pro payments-api % pytest tests/unit/payments/test_service.py'])
+    setTerminalOutput(prev => [...prev, 'ahmeddev@MacBook-Pro payments-api % pytest tests/unit/payments/test_refund.py'])
     await sleep(800)
     setTerminalOutput(prev => [...prev, '============================= test session starts =============================='])
     await sleep(400)
-    setTerminalOutput(prev => [...prev, 'collected 5 items'])
+    setTerminalOutput(prev => [...prev, 'collected 2 items'])
     await sleep(600)
-    setTerminalOutput(prev => [...prev, 'tests/unit/payments/test_service.py .....                                [100%]'])
-    setTerminalOutput(prev => [...prev, '============================== 5 passed in 0.12s ==============================='])
+    setTerminalOutput(prev => [...prev, 'tests/unit/payments/test_refund.py ..                                    [100%]'])
+    setTerminalOutput(prev => [...prev, '============================== 2 passed in 0.18s ==============================='])
     
     await sleep(2000)
-    setTerminalOutput(prev => [...prev, '', '# Ahmed: "Were these actually all the tests affected by the change?"', '# Ahmed: "I have no idea... I better run everything."'])
+    setTerminalOutput(prev => [...prev, '', '# Ahmed: "Local unit tests pass, but I don\'t know if this breaks the regression suite. I\'ll push it and let CI run regression."'])
     
-    await sleep(2500)
-    setTerminalOutput(prev => [...prev, 'ahmed@MacBook-Pro payments-api % pytest'])
+    await sleep(2000)
+    setTerminalOutput(prev => [...prev, 'ahmeddev@MacBook-Pro payments-api % git add .'])
     await sleep(800)
-    setTerminalOutput(prev => [...prev, '============================= test session starts =============================='])
-    await sleep(600)
-    setTerminalOutput(prev => [...prev, 'collected 3,450 items'])
+    setTerminalOutput(prev => [...prev, 'ahmeddev@MacBook-Pro payments-api % git commit -m "Add guarded retry to refund processing"'])
     await sleep(800)
-    setTerminalOutput(prev => [...prev, 'tests/unit/payments/test_auth.py ........                                [  0%]'])
-    await sleep(400)
-    setTerminalOutput(prev => [...prev, 'tests/unit/payments/test_billing.py ...............                      [  1%]'])
-    await sleep(600)
-    setTerminalOutput(prev => [...prev, 'tests/unit/payments/test_cache.py .....                                  [  1%]'])
-    await sleep(800)
-    setTerminalOutput(prev => [...prev, '', '⏳ Running... (Estimated time: 32 minutes)'])
-    
-    await sleep(3000)
-    setTerminalOutput(prev => [...prev, '^C', 'ahmed@MacBook-Pro payments-api % git add .'])
-    await sleep(800)
-    setTerminalOutput(prev => [...prev, 'ahmed@MacBook-Pro payments-api % git commit -m "Add Partial Refund Support"'])
-    await sleep(800)
-    setTerminalOutput(prev => [...prev, '[feature/partial-refund a92f31e] Add Partial Refund Support', ' 1 file changed, 2 insertions(+), 0 deletions(-)'])
+    setTerminalOutput(prev => [...prev, '[feat/refund-retry-policy a92f31e] Add guarded retry to refund processing', ' 3 files changed, 25 insertions(+), 3 deletions(-)'])
     
     await sleep(1500)
-    setTerminalOutput(prev => [...prev, 'ahmed@MacBook-Pro payments-api % git push origin feature/partial-refund'])
+    setTerminalOutput(prev => [...prev, 'ahmeddev@MacBook-Pro payments-api % git push origin feat/refund-retry-policy'])
     await sleep(1000)
     setTerminalOutput(prev => [...prev, 
-      'Enumerating objects: 5, done.', 
-      'Counting objects: 100% (5/5), done.', 
+      'Enumerating objects: 7, done.', 
+      'Counting objects: 100% (7/7), done.', 
       'Delta compression using up to 8 threads', 
-      'Compressing objects: 100% (3/3), done.', 
-      'Writing objects: 100% (3/3), 324 bytes | 324.00 KiB/s, done.', 
-      'Total 3 (delta 2), reused 0 (delta 0), pack-reused 0', 
+      'Compressing objects: 100% (4/4), done.', 
+      'Writing objects: 100% (4/4), 450 bytes | 450.00 KiB/s, done.', 
+      'Total 4 (delta 2), reused 0 (delta 0), pack-reused 0', 
       'To github.com:acme/payments-api.git', 
-      ' * [new branch]      feature/partial-refund -> feature/partial-refund', 
+      ' * [new branch]      feat/refund-retry-policy -> feat/refund-retry-policy', 
       '', 
       'Opening PR view...'
     ])
     
     await sleep(2000)
     setIsAutoPlaying(false)
-    navigate('/github/pr/184?step=0')
+    setPhase("NO_AURACLE")
+    navigate('/github/pr/184')
   }
 
   const simulateTyping = () => {
@@ -355,7 +346,7 @@ export default function IDE() {
       const cmd = inputValue.trim()
       setInputValue('')
       
-      setTerminalOutput(prev => [...prev, `mayachen@MacBook-Pro payments-api % ${cmd}`])
+      setTerminalOutput(prev => [...prev, `ahmeddev@MacBook-Pro payments-api % ${cmd}`])
       
       if (cmd === 'git add .') {
         setTimeout(() => setTerminalOutput(prev => [...prev]), 100)
@@ -668,7 +659,7 @@ export default function IDE() {
                 <div key={idx} style={{ whiteSpace: 'pre-wrap' }}>{out}</div>
               ))}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>mayachen@MacBook-Pro payments-api %</span>
+                <span>ahmeddev@MacBook-Pro payments-api %</span>
                 <input
                   type="text"
                   value={inputValue}
@@ -690,7 +681,7 @@ export default function IDE() {
             <div className="card-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Bot size={13} style={{ color: '#c9a8ff' }} />
-                <span className="card-title">Auracle Copilot</span>
+                <span className="card-title">Auracle Regression Intelligence</span>
               </div>
             </div>
             <div style={{ padding: '12px 14px' }}>

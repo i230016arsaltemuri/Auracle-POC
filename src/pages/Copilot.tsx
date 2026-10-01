@@ -170,7 +170,7 @@ I cannot explain things Auracle did not observe or predict. Try one of the sugge
                   alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
                 }}>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                    {msg.role === 'user' ? 'Maya Chen' : 'Auracle'} · {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {msg.role === 'user' ? 'Ahmed' : 'Auracle'} · {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div style={{
                     fontSize: 15,

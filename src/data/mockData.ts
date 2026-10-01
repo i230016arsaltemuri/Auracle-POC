@@ -35,8 +35,8 @@ export const PR = {
   baseBranch: "main",
   commit: "a92f31e",
   author: {
-    name: "Maya Chen",
-    username: "mayachen",
+    name: "Ahmed",
+    username: "ahmeddev",
     avatar: "MC",
   },
   createdAt: "2026-09-29T08:42:00Z",
@@ -1519,7 +1519,7 @@ export const DEMO_STEPS = [
     title: "Developer Changes Code",
     route: "/ide",
     description:
-      "Maya Chen modifies PaymentService.refund() to add retry logic. The IDE shows the diff, Auracle's sidebar highlights impact in real-time.",
+      "Ahmed modifies PaymentService.refund() to add retry logic. The IDE shows the diff, Auracle's sidebar highlights impact in real-time.",
     presenterNotes:
       "Show the realistic IDE simulation. Focus on the changed function and the retry exhaustion branch that will become the material gap.",
     highlight: "ide-editor",
@@ -1529,7 +1529,7 @@ export const DEMO_STEPS = [
     title: "PR #184 Created",
     route: "/pull-requests/184",
     description:
-      "Maya pushes feat/refund-retry-policy and opens PR #184. Auracle CI check immediately shows RUNNING.",
+      "Ahmed pushes feat/refund-retry-policy and opens PR #184. Auracle CI check immediately shows RUNNING.",
     presenterNotes:
       "The GitHub-style PR view shows the CI check starting. This is what the team sees before Auracle results are ready.",
     highlight: "pr-checks",

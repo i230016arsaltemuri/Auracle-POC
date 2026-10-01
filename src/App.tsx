@@ -1,8 +1,8 @@
 import './index.css'
-import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
-  LayoutDashboard, GitBranch, GitPullRequest, Zap, CheckSquare,
-  BarChart2, Activity, History, Bot, Settings, ChevronRight,
+  GitBranch, GitPullRequest, Zap, CheckSquare,
+  Activity, History, Bot, Settings, ChevronRight,
   Search, Bell, Database
 } from 'lucide-react'
 import { REPO } from './data/mockData'
@@ -12,7 +12,7 @@ import Overview from './pages/Overview'
 import Repositories from './pages/Repositories'
 import PullRequests from './pages/PullRequests'
 import ChangeImpact from './pages/ChangeImpact'
-import TestSelection from './pages/TestSelection'
+// Removed TestSelection
 import Coverage from './pages/Coverage'
 import TestHealth from './pages/TestHealth'
 import HistoryPage from './pages/HistoryPage'
@@ -22,6 +22,10 @@ import Install from './pages/Install'
 import IDE from './pages/IDE'
 import PRReport from './pages/PRReport'
 import GitHubPR from './pages/GitHubPR'
+import TestNeeds from './pages/TestNeeds'
+import RegressionPlan from './pages/RegressionPlan'
+import Execution from './pages/Execution'
+import { DemoProvider } from './context/DemoScenarioContext'
 
 
 function AppShell() {
@@ -42,46 +46,52 @@ function AppShell() {
 
         <nav className="sidebar-nav">
           <div className="nav-section">
-            <NavLink to="/" end className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <LayoutDashboard size={14} /><span>Overview</span>
-            </NavLink>
+            <div className="nav-section-label">Workspace</div>
             <NavLink to="/repositories" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
               <Database size={14} /><span>Repositories</span>
             </NavLink>
             <NavLink to="/pull-requests" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <GitPullRequest size={14} /><span>Pull Requests</span>
+              <GitPullRequest size={14} /><span>Changes</span>
               <span className="nav-badge">1</span>
             </NavLink>
           </div>
 
           <div className="nav-section">
-            <div className="nav-section-label">Analysis</div>
+            <div className="nav-section-label">Current Change</div>
+            <NavLink to="/pull-requests/184/report" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
+              <Zap size={14} /><span>Change Report</span>
+            </NavLink>
             <NavLink to="/change-impact" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <Zap size={14} /><span>Change Impact</span>
+              <Zap size={14} /><span>Impact</span>
             </NavLink>
-            <NavLink to="/test-selection" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <CheckSquare size={14} /><span>Test Selection</span>
+            <NavLink to="/test-needs" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
+              <CheckSquare size={14} /><span>Test Needs</span>
             </NavLink>
-            <NavLink to="/coverage" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <BarChart2 size={14} /><span>Coverage</span>
+            <NavLink to="/regression-plan" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
+              <CheckSquare size={14} /><span>Regression Plan</span>
+            </NavLink>
+            <NavLink to="/execution" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
+              <Activity size={14} /><span>Execution</span>
             </NavLink>
           </div>
 
           <div className="nav-section">
-            <div className="nav-section-label">Intelligence</div>
-            <NavLink to="/test-health" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <Activity size={14} /><span>Test Health</span>
-            </NavLink>
+            <div className="nav-section-label">Evaluation</div>
             <NavLink to="/history" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <History size={14} /><span>History</span>
+              <History size={14} /><span>History / Model Eval</span>
             </NavLink>
+          </div>
+
+          <div className="nav-section">
+            <div className="nav-section-label">More</div>
             <NavLink to="/copilot" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
-              <Bot size={14} /><span>AI Copilot</span>
+              <Bot size={14} /><span>Ask Auracle</span>
               <span className="nav-badge blue">AI</span>
             </NavLink>
           </div>
 
           <div className="nav-section" style={{ marginTop: 'auto' }}>
+            <div className="nav-section-label">System</div>
             <NavLink to="/settings" className={({isActive}) => `nav-item${isActive ? ' active' : ''}`}>
               <Settings size={14} /><span>Settings</span>
             </NavLink>
@@ -197,14 +207,18 @@ function AppShell() {
         {/* Content */}
         <div className={isFullscreen ? "" : "content-area"} style={isFullscreen ? { flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' } : {}}>
           <Routes>
-            <Route path="/" element={<Overview onOpenPR={() => navigate('/pull-requests/184/report')} />} />
+            <Route path="/" element={<Navigate to="/ide" replace />} />
+            <Route path="/overview" element={<Overview onOpenPR={() => navigate('/pull-requests/184/report')} />} />
             <Route path="/repositories" element={<Repositories />} />
             <Route path="/pull-requests" element={<PullRequests />} />
             <Route path="/pull-requests/184" element={<PullRequests />} />
             <Route path="/pull-requests/184/report" element={<PRReport />} />
             <Route path="/github/pr/184" element={<GitHubPR />} />
             <Route path="/change-impact" element={<ChangeImpact />} />
-            <Route path="/test-selection" element={<TestSelection />} />
+            <Route path="/test-selection" element={<RegressionPlan />} />
+            <Route path="/regression-plan" element={<RegressionPlan />} />
+            <Route path="/test-needs" element={<TestNeeds />} />
+            <Route path="/execution" element={<Execution />} />
             <Route path="/coverage" element={<Coverage />} />
             <Route path="/test-health" element={<TestHealth />} />
             <Route path="/history" element={<HistoryPage />} />
@@ -223,7 +237,9 @@ function AppShell() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <DemoProvider>
+        <AppShell />
+      </DemoProvider>
     </BrowserRouter>
   )
 }
